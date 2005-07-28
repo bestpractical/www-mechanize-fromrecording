@@ -1,0 +1,10 @@
+GET /bar.html HTTP/1.1
+Accept: */*
+Accept-Language: en
+Accept-Encoding: gzip, deflate
+Cookie: RT_SID_example.com.8080=fb7848a4cf2576752a010462d0a70027; style=black with blue on white
+Referer: http://localhost:8080/foo.html
+User-Agent: Mozilla/5.0 (Macintosh; U; PPC Mac OS X; en) AppleWebKit/412.6 (KHTML, like Gecko) Safari/412.2
+Connection: keep-alive
+Host: localhost:8080
+

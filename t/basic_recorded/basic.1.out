@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-type: text/html
+Content-length: 144
+
+<html>
+<head><title>Foo</title></head>
+<body>Foo links to <a href="bar.html">bar</a> and has this image: <img src="image.gif" /></body>
+</html>
