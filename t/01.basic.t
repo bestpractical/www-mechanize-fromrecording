@@ -14,5 +14,3 @@ my $script = $PM->mech_script;
 
 like($script, qr/my \$mech = WWW::Mechanize->new;/);
 
-warn $script;
-

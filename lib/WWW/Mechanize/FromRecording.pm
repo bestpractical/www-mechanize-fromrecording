@@ -12,6 +12,8 @@ use HTTP::Response;
 use HTTP::Request;
 use File::Basename ();
 use IO::Dir;
+use HTML::TreeBuilder;
+use HTML::FormatText;
 
 =head1 NAME
 
@@ -90,6 +92,8 @@ my \$mech = @{[ $self->mech_class ]}->new;
 END_HEAD
 
     my $last_real_URL;
+    my %last_links;
+    my %redirected;
 
     for my $messages ($self->_messages) {
 	my $request = $messages->{'request'};
@@ -99,13 +103,17 @@ END_HEAD
 
 	my $line = qq(\$mech->get(q{$URL}););
 
-	my $comment = sub { $line .= "\n# ($_[0])" };
+	my $comment = sub { my $new = shift; $new =~ s/^/# /mg; $line .= "\n$new" };
 	my $comment_out = sub { $line = "# $line"; $comment->(@_) };
 
 	my $ct = $response->content_type;
 
 	unless ($request->method eq 'GET') {
 	    $comment_out->("method was " . $request->method . ", not GET");
+	} elsif ($response->code == 302) {
+	    my $to = $response->header('Location');
+	    $comment->("redirected to $to");
+	    $redirected{$to} = $URL;
 	} elsif ($response->code != 200) {
 	    $comment_out->("response code was " . $response->code . ", not 200");
 	} elsif (not defined $ct or not length $ct) {
@@ -115,13 +123,42 @@ END_HEAD
 	} else {
 	    # Looks good.  What else can we glean?
 	    
+	    if (exists $redirected{$request->uri}) {
+		$comment_out->("we were probably redirected here from " . delete $redirected{$request->uri});
+	    }
+	    
 	    my $referer = $request->header('Referer');
 	    if (defined $referer and length $referer) {
 		$comment->("looks like we got here from $referer");
 
-		$comment->("hey, that's the last page we went to. maybe we clicked a link.")
-		    if $last_real_URL and $referer eq $last_real_URL;
+	    	if ($last_real_URL and $referer eq $last_real_URL) {
+		    $comment->("hey, that's the last page we went to. maybe we clicked a link.");
+		    if ($last_links{$URL}) {
+			$comment->("maybe this would do the trick:");
+			$comment->("\$mech->follow_link(q{$last_links{$URL}})");
+		    } else {
+			$comment->("(but I don't see one there)");
+		    } 
+		} 
 	    } 
+
+	    my $html_tree = HTML::TreeBuilder->new_from_content($response->content);
+
+	    %last_links = ();
+
+	    for (@{ $html_tree->extract_links('a') }) {
+		my ($link, $element, $attr, $tag) = @$_;
+		next unless lc $attr eq 'href';
+
+		my $uri = URI->new($link)->abs($URL); # XXX TODO FIXME deal with base href
+		
+		$last_links{$uri} = $element->as_trimmed_text;
+	    }
+
+	    my $text = HTML::FormatText->new->format($html_tree);
+	    $comment->("text of page is:");
+	    $text =~ s/^/| /mg;
+	    $comment->($text);
 
 	    $last_real_URL = $URL;
 	} 

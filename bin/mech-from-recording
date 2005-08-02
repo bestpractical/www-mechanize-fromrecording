@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
+=head1 NAME
+
+mech-from-recording - Makes a WWW::Mechanize script from an HTTP recording
+
+=cut
+
+use strict;
+BEGIN { 
+    unless (eval {require WWW::Mechanize::FromRecording; 1}) {
+	use lib 'lib';
+	require WWW::Mechanize::FromRecording;
+    } 
+}
+use Getopt::Long;
+use Pod::Usage;
+
+GetOptions( 
+    help =>     sub { pod2usage(1); },
+) or pod2usage(2);
+
+=head1 SYNOPSIS
+
+mech-from-recording prefix
+
+Options:
+
+    --help          Show this message
+
+The prefix must be the prefix of the recording files, like C</tmp/http-server-simple-recorder>.
+
+=cut
+
+my $prefix = shift or die "Must specify a prefix for the recording files\n";
+
+my $FR = WWW::Mechanize::FromRecording->new($prefix);
+
+print $FR->mech_script;
+
